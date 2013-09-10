@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>gauge.js</title> 
+  <meta name="description" content="100% native and cool looking animated JavaScript/CoffeeScript gauge">
+  <meta name="viewport" content="width=1024, maximum-scale=1">
+  <meta property="og:image" content="http://bernii.github.com/gauge.js/assets/preview.jpg?v=1" />
+  <link rel="shortcut icon" href="favicon.ico">
+  <meta http-equiv="X-UA-Compatible" content="IE=7" />
+  <link href="assets/bootstrap.min.css" type="text/css" rel="stylesheet">
+  <link href="assets/main.css?v=5" type="text/css" rel="stylesheet">
+  <link href='http://fonts.googleapis.com/css?family=Amaranth:400,700|Just+Another+Hand' rel='stylesheet' type='text/css'>
+  <link href="assets/prettify.css" type="text/css" rel="stylesheet">
+  
+  
+  <script src="dist/gauge.js"></script>
+  <!--[if lt IE 9]><script type="text/javascript" src="assets/excanvas.compiled.js"></script><![endif]-->
+</head>
+<body>
+
+<table>
+	<tr>
+		<td>
+			<div id="labelOne"></div>	
+		</td>
+		<td>
+			<div id="labelTwo"></div>		
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<canvas width=500 height=300 id="gaugeOne">		
+		</td>
+		<td>
+			<canvas width=500 height=300 id="gaugeTwo">		
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<input id="valueOne" type="text" style="width:50px;"></input><button onclick="updateOne()">Update GaugeOne</button>			
+		</td>
+		<td>
+			<input id="valueTwo" type="text" style="width:50px;"></input><button onclick="updateTwo()">Update GaugeTwo</button>
+		</td>	
+	</tr>
+	<tr>
+		<td >
+			<button onclick="resizeAll()">Resize</button>			
+		</td>
+	</tr>
+</table>
+
+<script type="text/javascript">
+
+	var optsOne = {
+        lines: 12, // The number of lines to draw
+        angle: 0, // The length of each line
+        lineWidth: 0.4, // The line thickness
+        pointer: {
+          length: 0.9, // The radius of the inner circle
+          strokeWidth: 0.035, // The rotation offset
+          color: '#1F0E18' // Fill color
+        },
+        strokeColor: '#E0E0E0',
+        limitMax: true,
+        percentColors: undefined
+      };
+
+	var gaugeOneTarget = document.getElementById('gaugeOne');
+	var gaugeOne = new Gauge(gaugeOneTarget);
+	gaugeOne.setOptions(optsOne);
+	gaugeOne.setTextField(document.getElementById('labelOne'));
+	
+	gaugeOne.maxValue = 100;
+	gaugeOne.set(85);
+
+	var gaugeTwoTarget = document.getElementById('gaugeTwo');
+	var gaugeTwo = new Gauge(gaugeTwoTarget);
+	//gaugeTwo.setOptions(optsOne);
+	gaugeTwo.setTextField(document.getElementById('labelTwo'));
+	gaugeTwo.maxValue = 100;
+	gaugeTwo.set(25);
+
+	
+	function updateOne(){
+		var value = parseFloat(document.getElementById("valueOne").value);
+		
+		gaugeOne.set(value); // set new values dynamically
+	    //gaugeOne.update();
+	}
+	
+	function updateTwo(){
+		var value = parseFloat(document.getElementById("valueTwo").value);
+		
+		gaugeTwo.set(value);
+		//gaugeTwo.update();		
+	}
+	
+	function resize(el, gauge){
+		
+		if (el.width == 500){
+			el.width = 1000;
+			el.height = 600;
+		} else {
+			el.width = 500;
+			el.height = 300;
+		}
+		
+		gauge.setOptions();
+        gauge.render();
+		
+	}
+	
+	function resizeAll(){
+		
+		resize(gaugeOneTarget, gaugeOne);
+		resize(gaugeTwoTarget, gaugeTwo);
+		
+	}
+	
+</script>
+
+</body>
+</html>

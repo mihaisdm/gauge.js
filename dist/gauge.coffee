@@ -37,16 +37,6 @@ do () ->
 		window.cancelAnimationFrame = (id) ->
 			isCancelled[id] = true
 
-String.prototype.hashCode = () ->
-	hash = 0
-	if this.length == 0
-		return hash
-	for i in [0...this.length]
-		char = this.charCodeAt(i)
-		hash = ((hash << 5) - hash) + char
-		hash = hash & hash # Convert to 32bit integer
-	return hash
-
 secondsToString = (sec) ->
 	hr = Math.floor(sec / 3600)
 	min = Math.floor((sec - (hr * 3600))/60)
@@ -60,7 +50,7 @@ secondsToString = (sec) ->
 	hr = if hr then hr + ':' else ''
 	return hr + min + ':' + sec
 
-formatNumber = (num) ->
+formatNumber = (num) -> 
 		return addCommas(num.toFixed(0))
 
 updateObjectValues = (obj1, obj2) ->
@@ -95,22 +85,35 @@ cutHex = (nStr) ->
 
 class ValueUpdater
 	animationSpeed: 32
-	constructor: (addToAnimationQueue=true, @clear=true) ->
-		if addToAnimationQueue
-			AnimationUpdater.add(@)
+	animId: null
+	disableAnimation: false 
+	
+	constructor: (@addToAnimationQueue=true, @clear=true) ->
 
 	update: (force=false) ->
 		if force or @displayedValue != @value
 			if @ctx and @clear
 				@ctx.clearRect(0, 0, @canvas.width, @canvas.height)
 			diff = @value - @displayedValue
-			if Math.abs(diff / @animationSpeed) <= 0.001
+			if Math.abs(diff / @animationSpeed) <= 0.001 or @disableAnimation
 				@displayedValue = @value
 			else
 				@displayedValue = @displayedValue + diff / @animationSpeed
 			@render()
 			return true
 		return false
+	
+	animate: () ->
+		animationFinished = true
+		if @addToAnimationQueue
+			if @update()
+				animationFinished = false
+		if not animationFinished
+			refereceToThis = @
+			@animId = requestAnimationFrame(-> refereceToThis.animate())
+		else
+			cancelAnimationFrame(@animId)	
+		
 
 class BaseGauge extends ValueUpdater
 	displayScale: 1
@@ -127,7 +130,7 @@ class BaseGauge extends ValueUpdater
 	setOptions: (options=null) ->
 		@options = mergeObjects(@options, options)
 		if @textField
-			@textField.el.style.fontSize = options.fontSize + 'px'
+			@textField.el.style.fontSize = @options.fontSize + 'px'
 
 		if @options.angle > .5
 			@gauge.options.angle = .5
@@ -204,11 +207,12 @@ class GaugePointer extends ValueUpdater
 	constructor: (@gauge) ->
 		@ctx = @gauge.ctx
 		@canvas = @gauge.canvas
+		@disableAnimation =  @gauge.disableAnimation
 		super(false, false)
 		@setOptions()
 
 	setOptions: (options=null) ->
-		updateObjectValues(@options, options)
+		@options = updateObjectValues(@options, options)
 		@length = @canvas.height * @options.length
 		@strokeWidth = @canvas.height * @options.strokeWidth
 		@maxValue = @gauge.maxValue
@@ -217,7 +221,7 @@ class GaugePointer extends ValueUpdater
 		@options.angle = @gauge.options.angle
 
 	render: () ->
-		angle = @gauge.getAngle.call(@, @displayedValue)
+		angle = @gauge.getAngle(@displayedValue)
 		centerX = @canvas.width / 2
 		centerY = @canvas.height * 0.9
 
@@ -296,6 +300,7 @@ class Gauge extends BaseGauge
 		@percentColors = null
 		if typeof G_vmlCanvasManager != 'undefined'
 			@canvas = window.G_vmlCanvasManager.initElement(@canvas)
+			@disableAnimation = true
 		@ctx = @canvas.getContext('2d')
 		@gp = [new GaugePointer(@)]
 		@setOptions()
@@ -347,9 +352,9 @@ class Gauge extends BaseGauge
 
 		if max_hit
 			unless @options.limitMax
-				AnimationUpdater.run()
+				@animate()
 		else
-			AnimationUpdater.run()
+			@animate()
 
 	getAngle: (value) ->
 		return (1 + @options.angle) * Math.PI + ((value - @minValue) / (@maxValue - @minValue)) * (1 - @options.angle * 2) * Math.PI
@@ -453,7 +458,7 @@ class BaseDonut extends BaseGauge
 		@value = value
 		if @value > @maxValue
 			@maxValue = @value * 1.1
-		AnimationUpdater.run()
+		@animate()
 
 	render: () ->
 		displayedAngle = @getAngle(@displayedValue)
@@ -501,27 +506,6 @@ class Donut extends BaseDonut
 		@options._orgStrokeColor = @options.strokeColor
 		@options.strokeColor = @strokeGradient(w, h, start, stop)
 		return @
-
-window.AnimationUpdater =
-	elements: []
-	animId: null
-
-	addAll: (list) ->
-		for elem in list
-			AnimationUpdater.elements.push(elem)
-
-	add: (object) ->
-		AnimationUpdater.elements.push(object)
-
-	run: () ->
-		animationFinished = true
-		for elem in AnimationUpdater.elements
-			if elem.update()
-				animationFinished = false
-		if not animationFinished
-			AnimationUpdater.animId = requestAnimationFrame(AnimationUpdater.run)
-		else
-			cancelAnimationFrame(AnimationUpdater.animId)
 
 window.Gauge = Gauge
 window.Donut = Donut

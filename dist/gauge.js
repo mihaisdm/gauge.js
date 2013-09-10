@@ -50,20 +50,6 @@
     }
   })();
 
-  String.prototype.hashCode = function() {
-    var char, hash, i, _i, _ref;
-    hash = 0;
-    if (this.length === 0) {
-      return hash;
-    }
-    for (i = _i = 0, _ref = this.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
-      char = this.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return hash;
-  };
-
   secondsToString = function(sec) {
     var hr, min;
     hr = Math.floor(sec / 3600);
@@ -137,14 +123,13 @@
   ValueUpdater = (function() {
     ValueUpdater.prototype.animationSpeed = 32;
 
+    ValueUpdater.prototype.animId = null;
+
+    ValueUpdater.prototype.disableAnimation = false;
+
     function ValueUpdater(addToAnimationQueue, clear) {
-      if (addToAnimationQueue == null) {
-        addToAnimationQueue = true;
-      }
+      this.addToAnimationQueue = addToAnimationQueue != null ? addToAnimationQueue : true;
       this.clear = clear != null ? clear : true;
-      if (addToAnimationQueue) {
-        AnimationUpdater.add(this);
-      }
     }
 
     ValueUpdater.prototype.update = function(force) {
@@ -157,7 +142,7 @@
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         }
         diff = this.value - this.displayedValue;
-        if (Math.abs(diff / this.animationSpeed) <= 0.001) {
+        if (Math.abs(diff / this.animationSpeed) <= 0.001 || this.disableAnimation) {
           this.displayedValue = this.value;
         } else {
           this.displayedValue = this.displayedValue + diff / this.animationSpeed;
@@ -166,6 +151,24 @@
         return true;
       }
       return false;
+    };
+
+    ValueUpdater.prototype.animate = function() {
+      var animationFinished, refereceToThis;
+      animationFinished = true;
+      if (this.addToAnimationQueue) {
+        if (this.update()) {
+          animationFinished = false;
+        }
+      }
+      if (!animationFinished) {
+        refereceToThis = this;
+        return this.animId = requestAnimationFrame(function() {
+          return refereceToThis.animate();
+        });
+      } else {
+        return cancelAnimationFrame(this.animId);
+      }
     };
 
     return ValueUpdater;
@@ -210,7 +213,7 @@
       }
       this.options = mergeObjects(this.options, options);
       if (this.textField) {
-        this.textField.el.style.fontSize = options.fontSize + 'px';
+        this.textField.el.style.fontSize = this.options.fontSize + 'px';
       }
       if (this.options.angle > .5) {
         this.gauge.options.angle = .5;
@@ -322,6 +325,7 @@
       this.gauge = gauge;
       this.ctx = this.gauge.ctx;
       this.canvas = this.gauge.canvas;
+      this.disableAnimation = this.gauge.disableAnimation;
       GaugePointer.__super__.constructor.call(this, false, false);
       this.setOptions();
     }
@@ -330,7 +334,7 @@
       if (options == null) {
         options = null;
       }
-      updateObjectValues(this.options, options);
+      this.options = updateObjectValues(this.options, options);
       this.length = this.canvas.height * this.options.length;
       this.strokeWidth = this.canvas.height * this.options.strokeWidth;
       this.maxValue = this.gauge.maxValue;
@@ -341,7 +345,7 @@
 
     GaugePointer.prototype.render = function() {
       var angle, centerX, centerY, endX, endY, startX, startY, x, y;
-      angle = this.gauge.getAngle.call(this, this.displayedValue);
+      angle = this.gauge.getAngle(this.displayedValue);
       centerX = this.canvas.width / 2;
       centerY = this.canvas.height * 0.9;
       x = Math.round(centerX + this.length * Math.cos(angle));
@@ -442,6 +446,7 @@
       this.percentColors = null;
       if (typeof G_vmlCanvasManager !== 'undefined') {
         this.canvas = window.G_vmlCanvasManager.initElement(this.canvas);
+        this.disableAnimation = true;
       }
       this.ctx = this.canvas.getContext('2d');
       this.gp = [new GaugePointer(this)];
@@ -519,10 +524,10 @@
       this.value = value[value.length - 1];
       if (max_hit) {
         if (!this.options.limitMax) {
-          return AnimationUpdater.run();
+          return this.animate();
         }
       } else {
-        return AnimationUpdater.run();
+        return this.animate();
       }
     };
 
@@ -661,7 +666,7 @@
       if (this.value > this.maxValue) {
         this.maxValue = this.value * 1.1;
       }
-      return AnimationUpdater.run();
+      return this.animate();
     };
 
     BaseDonut.prototype.render = function() {
@@ -730,39 +735,6 @@
 
   })(BaseDonut);
 
-  window.AnimationUpdater = {
-    elements: [],
-    animId: null,
-    addAll: function(list) {
-      var elem, _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = list.length; _i < _len; _i++) {
-        elem = list[_i];
-        _results.push(AnimationUpdater.elements.push(elem));
-      }
-      return _results;
-    },
-    add: function(object) {
-      return AnimationUpdater.elements.push(object);
-    },
-    run: function() {
-      var animationFinished, elem, _i, _len, _ref2;
-      animationFinished = true;
-      _ref2 = AnimationUpdater.elements;
-      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-        elem = _ref2[_i];
-        if (elem.update()) {
-          animationFinished = false;
-        }
-      }
-      if (!animationFinished) {
-        return AnimationUpdater.animId = requestAnimationFrame(AnimationUpdater.run);
-      } else {
-        return cancelAnimationFrame(AnimationUpdater.animId);
-      }
-    }
-  };
-
   window.Gauge = Gauge;
 
   window.Donut = Donut;
@@ -772,3 +744,7 @@
   window.TextRenderer = TextRenderer;
 
 }).call(this);
+
+/*
+//@ sourceMappingURL=gauge.map
+*/
