@@ -461,16 +461,15 @@
       }
       Gauge.__super__.setOptions.call(this, options);
       this.configPercentColors();
-      this.lineWidth = this.canvas.height * (1 - this.paddingBottom) * this.options.lineWidth;
-      this.radius = this.canvas.height * (1 - this.paddingBottom) - this.lineWidth;
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.render();
       _ref1 = this.gp;
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         gauge = _ref1[_i];
         gauge.setOptions(this.options.pointer);
-        gauge.render();
       }
+      this.lineWidth = this.canvas.height * (1 - this.paddingBottom) * this.options.lineWidth;
+      this.radius = this.canvas.height * (1 - this.paddingBottom) - this.lineWidth;
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.render();
       return this;
     };
 
